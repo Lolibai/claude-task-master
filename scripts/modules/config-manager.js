@@ -16,6 +16,8 @@ import {
 	TASKMASTER_DIR
 } from '../../src/constants/paths.js';
 import { findConfigPath } from '../../src/utils/path-utils.js';
+// FORK LAYER: see overlay/claude-local/README.md
+import { applyModelDefaults } from '../../overlay/claude-local/index.js';
 import MODEL_MAP from './supported-models.json' with { type: 'json' };
 import { findProjectRoot, isEmpty, log, resolveEnvVariable } from './utils.js';
 
@@ -68,6 +70,11 @@ const DEFAULTS = {
 		defaultModel: 'grok-4-latest'
 	}
 };
+
+// FORK LAYER: point every role at the local Claude subscription. Deliberately
+// applied *after* the untouched upstream literal above so upstream edits to it
+// merge cleanly. Set TM_CLAUDE_LOCAL_OVERLAY=0 to restore upstream defaults.
+applyModelDefaults(DEFAULTS);
 
 // --- Internal Config Loading ---
 let loadedConfig = null;

@@ -27,6 +27,7 @@ import {
 import { createBridgeLogger } from '../bridge-utils.js';
 import {
 	getDebugFlag,
+	getResearchProvider,
 	hasCodebaseAnalysis,
 	isApiKeySet
 } from '../config-manager.js';
@@ -92,16 +93,23 @@ async function updateTaskById(
 			throw new Error('Could not determine project root directory');
 		}
 
-		if (useResearch && !isApiKeySet('perplexity', session)) {
-			report(
-				'warn',
-				'Perplexity research requested but API key not set. Falling back.'
-			);
-			if (outputFormat === 'text')
-				console.log(
-					chalk.yellow('Perplexity AI not available. Falling back to main AI.')
+		// Check the provider actually configured for the research role rather than
+		// assuming Perplexity — keyless providers such as `claude-code` report OK.
+		if (useResearch) {
+			const researchProvider = getResearchProvider(projectRoot);
+			if (!isApiKeySet(researchProvider, session, projectRoot)) {
+				report(
+					'warn',
+					`Research requested but no API key is set for the '${researchProvider}' provider. Falling back.`
 				);
-			useResearch = false;
+				if (outputFormat === 'text')
+					console.log(
+						chalk.yellow(
+							`Research provider '${researchProvider}' not available. Falling back to main AI.`
+						)
+					);
+				useResearch = false;
+			}
 		}
 
 		// --- BRIDGE: Try remote update first (API storage) ---

@@ -474,7 +474,7 @@ async function updateSubtaskById(
 					)
 				);
 				console.log('  1. Try again in a few minutes.');
-				console.log('  2. Ensure PERPLEXITY_API_KEY is set for fallback.');
+				console.log('  2. Check your fallback model with: task-master models');
 			} else if (error.message?.includes('not found')) {
 				console.log(chalk.yellow('\nTo fix this issue:'));
 				console.log(

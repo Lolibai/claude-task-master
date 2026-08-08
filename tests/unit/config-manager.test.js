@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { jest } from '@jest/globals';
+// FORK LAYER: see overlay/claude-local/README.md
+import { CLAUDE_LOCAL_MODELS } from '../../overlay/claude-local/index.js';
 
 // Mock modules first before any imports
 jest.mock('fs', () => ({
@@ -114,28 +116,11 @@ const MOCK_CONFIG_PATH = path.join(
 	'.taskmaster/config.json'
 );
 
-// Updated DEFAULT_CONFIG reflecting the implementation
+// Updated DEFAULT_CONFIG reflecting the implementation.
+// FORK LAYER: model roles come from overlay/claude-local, which overlays the
+// upstream DEFAULTS literal at load time. See overlay/claude-local/README.md
 const DEFAULT_CONFIG = {
-	models: {
-		main: {
-			provider: 'anthropic',
-			modelId: 'claude-sonnet-4-20250514',
-			maxTokens: 64000,
-			temperature: 0.2
-		},
-		research: {
-			provider: 'perplexity',
-			modelId: 'sonar',
-			maxTokens: 8700,
-			temperature: 0.1
-		},
-		fallback: {
-			provider: 'anthropic',
-			modelId: 'claude-3-7-sonnet-20250219',
-			maxTokens: 120000,
-			temperature: 0.2
-		}
-	},
+	models: CLAUDE_LOCAL_MODELS,
 	global: {
 		anonymousTelemetry: true,
 		logLevel: 'info',

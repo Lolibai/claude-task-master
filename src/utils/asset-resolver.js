@@ -8,6 +8,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+// FORK LAYER: see overlay/claude-local/README.md
+import { transformAsset } from '../../overlay/claude-local/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -88,5 +90,8 @@ export function assetExists(relativePath) {
  */
 export function readAsset(relativePath, encoding = 'utf8') {
 	const assetPath = getAssetPath(relativePath);
-	return fs.readFileSync(assetPath, encoding);
+	// FORK LAYER: rewrite templates on read so assets/ stays byte-identical to
+	// upstream. Set TM_CLAUDE_LOCAL_OVERLAY=0 to bypass.
+	// See overlay/claude-local/README.md
+	return transformAsset(relativePath, fs.readFileSync(assetPath, encoding));
 }

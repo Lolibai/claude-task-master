@@ -71,6 +71,7 @@ jest.unstable_mockModule(
 	'../../../../../scripts/modules/config-manager.js',
 	() => ({
 		getDebugFlag: jest.fn(() => false),
+		getResearchProvider: jest.fn(() => 'claude-code'),
 		isApiKeySet: jest.fn(() => true),
 		hasCodebaseAnalysis: jest.fn(() => false)
 	})
@@ -158,6 +159,9 @@ const { ContextGatherer } = await import(
 );
 const { FuzzyTaskSearch } = await import(
 	'../../../../../scripts/modules/utils/fuzzyTaskSearch.js'
+);
+const { getResearchProvider, isApiKeySet } = await import(
+	'../../../../../scripts/modules/config-manager.js'
 );
 const { default: updateTaskById } = await import(
 	'../../../../../scripts/modules/task-manager/update-task-by-id.js'
@@ -869,5 +873,86 @@ describe('Fuzzy Task Search Integration', () => {
 			})
 		);
 		expect(mockFuzzySearch.getTaskIds).toHaveBeenCalled();
+	});
+});
+
+describe('updateTaskById research provider selection', () => {
+	let fs;
+	let generateObjectService;
+
+	const singleTask = {
+		tag: 'master',
+		tasks: [
+			{
+				id: 1,
+				title: 'Task to update',
+				description: 'Description',
+				status: 'pending',
+				dependencies: [],
+				priority: 'medium',
+				details: null,
+				testStrategy: null,
+				subtasks: []
+			}
+		]
+	};
+
+	beforeEach(async () => {
+		jest.clearAllMocks();
+		fs = await import('fs');
+		fs.existsSync.mockReturnValue(true);
+		readJSON.mockReturnValue(singleTask);
+
+		const aiServices = await import(
+			'../../../../../scripts/modules/ai-services-unified.js'
+		);
+		generateObjectService = aiServices.generateObjectService;
+		generateObjectService.mockResolvedValue({
+			mainResult: { task: { ...singleTask.tasks[0], details: 'Updated' } },
+			telemetryData: {}
+		});
+	});
+
+	test('keeps research role when the configured research provider needs no API key', async () => {
+		// Regression: the check used to be hardcoded to Perplexity, so a keyless
+		// research provider like claude-code silently fell back to the main role.
+		getResearchProvider.mockReturnValue('claude-code');
+		isApiKeySet.mockReturnValue(true);
+
+		await updateTaskById(
+			'tasks/tasks.json',
+			1,
+			'Update with research',
+			true,
+			{ tag: 'master' },
+			'json'
+		);
+
+		expect(isApiKeySet).toHaveBeenCalledWith(
+			'claude-code',
+			undefined,
+			expect.anything()
+		);
+		expect(generateObjectService.mock.calls[0][0]).toMatchObject({
+			role: 'research'
+		});
+	});
+
+	test('falls back to the main role when the research provider has no API key', async () => {
+		getResearchProvider.mockReturnValue('perplexity');
+		isApiKeySet.mockReturnValue(false);
+
+		await updateTaskById(
+			'tasks/tasks.json',
+			1,
+			'Update with research',
+			true,
+			{ tag: 'master' },
+			'json'
+		);
+
+		expect(generateObjectService.mock.calls[0][0]).toMatchObject({
+			role: 'main'
+		});
 	});
 });

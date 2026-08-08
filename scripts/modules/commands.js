@@ -79,6 +79,7 @@ import {
 	getDebugFlag,
 	getDefaultNumTasks,
 	getOperatingMode,
+	getResearchProvider,
 	isApiKeySet,
 	isConfigFilePresent,
 	setSuppressConfigWarnings
@@ -156,6 +157,30 @@ import {
 	removeProfileRules
 } from '../../src/utils/rule-transformer.js';
 import { initializeProject } from '../init.js';
+
+/**
+ * Print whether the configured research provider is usable before running a
+ * research-backed command. Keyless providers such as `claude-code` (which uses
+ * the local Claude subscription) are always considered available.
+ * @param {string} operation - Human readable operation name, e.g. 'task update'
+ */
+function reportResearchProviderStatus(operation) {
+	const researchProvider = getResearchProvider();
+
+	if (isApiKeySet(researchProvider)) {
+		console.log(
+			chalk.blue(`Using '${researchProvider}' for research-backed ${operation}`)
+		);
+		return;
+	}
+
+	console.log(
+		chalk.yellow(
+			`Warning: No API key configured for the '${researchProvider}' research provider. Research-backed ${operation} will not be available.`
+		)
+	);
+	console.log(chalk.yellow(`Falling back to the main model for ${operation}.`));
+}
 
 /**
  * Check if the user is connected to a Hamster brief
@@ -1324,21 +1349,7 @@ function registerCommands(programInstance) {
 				}
 
 				if (useResearch) {
-					// Verify Perplexity API key exists if using research
-					if (!isApiKeySet('perplexity')) {
-						console.log(
-							chalk.yellow(
-								'Warning: PERPLEXITY_API_KEY environment variable is missing. Research-backed updates will not be available.'
-							)
-						);
-						console.log(
-							chalk.yellow('Falling back to Claude AI for task update.')
-						);
-					} else {
-						console.log(
-							chalk.blue('Using Perplexity AI for research-backed task update')
-						);
-					}
+					reportResearchProviderStatus('task update');
 				}
 
 				// Force append mode when connected to Hamster
@@ -1491,23 +1502,7 @@ function registerCommands(programInstance) {
 				}
 
 				if (useResearch) {
-					// Verify Perplexity API key exists if using research
-					if (!isApiKeySet('perplexity')) {
-						console.log(
-							chalk.yellow(
-								'Warning: PERPLEXITY_API_KEY environment variable is missing. Research-backed updates will not be available.'
-							)
-						);
-						console.log(
-							chalk.yellow('Falling back to Claude AI for subtask update.')
-						);
-					} else {
-						console.log(
-							chalk.blue(
-								'Using Perplexity AI for research-backed subtask update'
-							)
-						);
-					}
+					reportResearchProviderStatus('subtask update');
 				}
 
 				const result = await updateSubtaskById(

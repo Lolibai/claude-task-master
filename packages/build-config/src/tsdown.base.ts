@@ -32,8 +32,13 @@ export const baseConfig: Partial<UserConfig> = {
 		keepNames: true,
 		splitting: false // Disable code splitting for better stack traces
 	}),
-	// Keep all npm dependencies external (available via node_modules)
-	external: [/^[^@./]/, /^@(?!tm\/)/]
+	// Keep all npm dependencies external (available via node_modules), but never
+	// a path-based id. The `[^@./]` shape alone lets a Windows absolute path
+	// (`D:\repo\src\x.js`) look like a bare specifier, which externalizes the
+	// whole source tree and emits a bundle importing files that were never
+	// written.
+	external: (id: string) =>
+		!/^(?:[./]|[A-Za-z]:[\\/])/.test(id) && !id.startsWith('@tm/')
 };
 
 /**
